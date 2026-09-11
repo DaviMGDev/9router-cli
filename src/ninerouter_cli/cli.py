@@ -8,6 +8,8 @@ from rich.table import Table
 from .client import RouterClient
 from .display import print_output
 from .commands.combos import combos_group
+from .commands.providers import providers_group
+from .commands.models import models_group
 
 console = Console()
 
@@ -25,6 +27,8 @@ def cli(ctx: click.Context, url: str, token: str, as_json: bool):
 
 
 cli.add_command(combos_group)
+cli.add_command(providers_group)
+cli.add_command(models_group)
 
 
 @cli.command()
