@@ -7,6 +7,7 @@ from rich.table import Table
 
 from .client import RouterClient
 from .display import print_output
+from .commands.combos import combos_group
 
 console = Console()
 
@@ -21,6 +22,9 @@ def cli(ctx: click.Context, url: str, token: str, as_json: bool):
     ctx.ensure_object(dict)
     ctx.obj["client"] = RouterClient(base_url=url, token=token)
     ctx.obj["as_json"] = as_json
+
+
+cli.add_command(combos_group)
 
 
 @cli.command()
