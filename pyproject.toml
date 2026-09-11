@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "9router-cli"
+version = "0.1.0"
+description = "Fast, modular CLI client for 9Router server"
+readme = "README.md"
+authors = [{ name = "Davi" }]
+license = { text = "MIT" }
+requires-python = ">=3.9"
+dependencies = [
+    "click>=8.1.0",
+    "httpx>=0.27.0",
+    "rich>=13.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "ruff>=0.5.0",
+]
+
+[project.scripts]
+9r = "ninerouter_cli.cli:main"
+ninerouter = "ninerouter_cli.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

@@ -1,0 +1,311 @@
+openapi: 3.1.0
+info:
+  title: 9Router Gateway & Management API
+  description: API specifications extracted from 9router v0.5.75 standalone server.
+  version: 0.5.75
+
+servers:
+  - url: http://localhost:20128
+    description: Default local server
+
+components:
+  securitySchemes:
+    CliTokenAuth:
+      type: apiKey
+      in: header
+      name: x-9r-cli-token
+      description: SHA256(machineId + "9r-cli-auth" + cliSecret)[:16]
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: 9Router API Key (sk-...) for /v1 and /api routes
+
+security:
+  - CliTokenAuth: []
+  - BearerAuth: []
+
+paths:
+  /api/health:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: Server status and health
+
+  /api/version:
+    get:
+      summary: Version information
+      responses:
+        '200':
+          description: Current and latest version
+
+  /api/combos:
+    get:
+      summary: List all combos
+      responses:
+        '200':
+          description: List of combos
+    post:
+      summary: Create a new combo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, models]
+              properties:
+                name:
+                  type: string
+                kind:
+                  type: string
+                  default: llm
+                models:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Combo created
+        '400':
+          description: Validation error
+
+  /api/combos/{id}:
+    get:
+      summary: Get combo by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Combo details
+    put:
+      summary: Update combo
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                models:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Combo updated
+    delete:
+      summary: Delete combo
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Combo deleted
+
+  /api/providers:
+    get:
+      summary: List provider connections
+      responses:
+        '200':
+          description: Provider connections
+    post:
+      summary: Create API key provider connection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [provider, name, apiKey]
+              properties:
+                provider:
+                  type: string
+                name:
+                  type: string
+                apiKey:
+                  type: string
+      responses:
+        '200':
+          description: Provider connected
+
+  /api/providers/{id}:
+    get:
+      summary: Get provider connection
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Provider details
+    put:
+      summary: Update provider connection
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                priority:
+                  type: integer
+                isActive:
+                  type: boolean
+      responses:
+        '200':
+          description: Provider updated
+    delete:
+      summary: Delete provider connection
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Provider deleted
+
+  /api/providers/{id}/test:
+    post:
+      summary: Test provider connection
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Test result
+
+  /api/providers/{id}/models:
+    get:
+      summary: Get provider supported models
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Models list
+
+  /api/models:
+    get:
+      summary: List all internal catalog models
+      responses:
+        '200':
+          description: Models catalog
+
+  /v1/models:
+    get:
+      summary: List available models including active providers and combos (OpenAI format)
+      responses:
+        '200':
+          description: OpenAI compatible models list
+
+  /api/keys:
+    get:
+      summary: List 9router client API keys
+      responses:
+        '200':
+          description: Keys list
+    post:
+      summary: Create a new API key
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+      responses:
+        '200':
+          description: Key created
+        '400':
+          description: Error
+
+  /api/keys/{id}:
+    delete:
+      summary: Revoke API key
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Key revoked
+
+  /api/settings:
+    get:
+      summary: Get global settings
+      responses:
+        '200':
+          description: Settings dictionary
+    patch:
+      summary: Update settings
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings updated
+
+  /api/tunnel/status:
+    get:
+      summary: Get public tunnel status
+      responses:
+        '200':
+          description: Tunnel information
+  /api/tunnel/enable:
+    post:
+      summary: Enable Cloudflare tunnel
+      responses:
+        '200':
+          description: Tunnel enabled
+  /api/tunnel/disable:
+    post:
+      summary: Disable Cloudflare tunnel
+      responses:
+        '200':
+          description: Tunnel disabled
+
+  /api/cli-tools/all-statuses:
+    get:
+      summary: Get integration status for CLI tools (claude, codex, droid, etc.)
+      responses:
+        '200':
+          description: CLI tools integration status
