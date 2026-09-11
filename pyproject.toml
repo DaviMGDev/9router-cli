@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "9router-cli"
-version = "0.1.0"
+version = "0.1.1"
 description = "Fast, modular CLI client for 9Router server"
 readme = "README.md"
 authors = [{ name = "Davi" }]
@@ -28,3 +28,6 @@ ninerouter = "ninerouter_cli.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+ninerouter_cli = ["resources/*.md"]

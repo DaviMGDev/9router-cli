@@ -12,6 +12,7 @@ from .commands.providers import providers_group
 from .commands.models import models_group
 from .commands.keys import keys_group
 from .commands.settings_tools import settings_group, tunnel_group, tools_group
+from .commands.skill import skill_group
 
 console = Console()
 
@@ -35,6 +36,7 @@ cli.add_command(keys_group)
 cli.add_command(settings_group)
 cli.add_command(tunnel_group)
 cli.add_command(tools_group)
+cli.add_command(skill_group)
 
 
 @cli.command()
