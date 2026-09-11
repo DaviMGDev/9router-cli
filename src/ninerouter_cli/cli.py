@@ -10,6 +10,8 @@ from .display import print_output
 from .commands.combos import combos_group
 from .commands.providers import providers_group
 from .commands.models import models_group
+from .commands.keys import keys_group
+from .commands.settings_tools import settings_group, tunnel_group, tools_group
 
 console = Console()
 
@@ -29,6 +31,10 @@ def cli(ctx: click.Context, url: str, token: str, as_json: bool):
 cli.add_command(combos_group)
 cli.add_command(providers_group)
 cli.add_command(models_group)
+cli.add_command(keys_group)
+cli.add_command(settings_group)
+cli.add_command(tunnel_group)
+cli.add_command(tools_group)
 
 
 @cli.command()
