@@ -4,13 +4,17 @@ A fast, scriptable Python CLI client for managing your local [9Router](https://g
 
 ## Installation
 
-```bash
-# Clone repository
-git clone https://github.com/DaviMGDev/9router-cli.git
-cd 9router-cli
+### With `uv` (Recommended)
 
-# Install in virtualenv or with pipx
-pip install -e .
+Install as a global tool directly from source:
+```bash
+uv tool install --force ~/Projects/9router-cli
+```
+Or for local development:
+```bash
+cd ~/Projects/9router-cli
+uv venv
+uv pip install -e ".[dev]"
 ```
 
 ## Authentication
