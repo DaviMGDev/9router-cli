@@ -45,8 +45,14 @@ You can also explicitly pass `--token <token>` or `--url <url>`.
 # Inspect combo details
 9r combos get default
 
-# Create a combo with string model IDs (strictly validated)
+# Create a fallback combo (default)
 9r combos create my-coding-combo -m ag/claude-sonnet-4-6 -m ag/gemini-3.8-flash
+
+# Create a round-robin load balancing combo
+9r combos create my-rr-combo -m ag/gemini-3.8-flash -m ag/gemini-3.8-flash-low --strategy round-robin
+
+# Create a fusion combo with a judge model
+9r combos create my-fusion-combo -m ag/gemini-3.8-flash -m ag/gemini-3.7-flash-high --strategy fusion --judge ag/claude-opus-4-6-thinking
 
 # Delete combo
 9r combos delete my-coding-combo --yes
@@ -56,6 +62,21 @@ You can also explicitly pass `--token <token>` or `--url <url>`.
 ```bash
 # List all connected providers (active/inactive)
 9r providers list
+
+# Browse supported provider catalog (OAuth, Free Tier, API Key)
+9r providers catalog
+9r providers catalog --free
+9r providers catalog --search groq
+
+# Enable a free / zero-auth provider (e.g. opencode, mimo-free) directly from CLI
+9r providers enable-free opencode
+
+# Add a provider connection (free tier or API key)
+9r providers add opencode
+9r providers add groq --api-key gsk_...
+
+# Delete/disconnect a provider connection
+9r providers delete opencode --yes
 
 # Get provider details
 9r providers get <provider_id>
@@ -69,9 +90,14 @@ You can also explicitly pass `--token <token>` or `--url <url>`.
 # List all active routed models
 9r models list
 
-# Filter models by provider or search term
+# Filter active models by free tier or provider
+9r models list --free
 9r models list --provider ag
 9r models list --search claude
+
+# Browse full global catalog (even for unconnected providers)
+9r models list --catalog
+9r models list --catalog --free
 ```
 
 ### API Keys (`9r keys`)

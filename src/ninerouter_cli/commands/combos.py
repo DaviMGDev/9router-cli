@@ -26,6 +26,45 @@ def _find_combo(client: RouterClient, name_or_id: str):
     return None
 
 
+def _get_combo_strategies(client: RouterClient) -> dict:
+    """Retrieve all combo strategies from 9router settings."""
+    try:
+        settings = client.get("/api/settings")
+        return dict(settings.get("comboStrategies") or {})
+    except Exception:
+        return {}
+
+
+def _set_combo_strategy(client: RouterClient, name: str, strategy: str, judge_model: Optional[str] = None):
+    """Update or persist combo strategy in 9router settings."""
+    try:
+        settings = client.get("/api/settings")
+        strategies = dict(settings.get("comboStrategies") or {})
+        strategy = strategy.lower()
+        if strategy == "fallback" and not judge_model:
+            strategies.pop(name, None)
+        else:
+            entry = {"fallbackStrategy": strategy}
+            if judge_model:
+                entry["judgeModel"] = judge_model.strip()
+            strategies[name] = entry
+        client.patch("/api/settings", json={"comboStrategies": strategies})
+    except Exception as exc:
+        console.print(f"[yellow]Warning: Failed to persist strategy '{strategy}' for combo '{name}': {exc}[/yellow]")
+
+
+def _remove_combo_strategy(client: RouterClient, name: str):
+    """Remove combo strategy mapping from 9router settings on deletion."""
+    try:
+        settings = client.get("/api/settings")
+        strategies = dict(settings.get("comboStrategies") or {})
+        if name in strategies:
+            del strategies[name]
+            client.patch("/api/settings", json={"comboStrategies": strategies})
+    except Exception:
+        pass
+
+
 @combos_group.command(name="list")
 @click.pass_context
 def list_combos(ctx: click.Context):
@@ -35,6 +74,15 @@ def list_combos(ctx: click.Context):
 
     try:
         combos = client.get("/api/combos").get("combos", [])
+        strategies = _get_combo_strategies(client)
+
+        for c in combos:
+            c_name = c.get("name", "")
+            s_info = strategies.get(c_name, {})
+            c["strategy"] = s_info.get("fallbackStrategy", "fallback")
+            if judge := s_info.get("judgeModel"):
+                c["judgeModel"] = judge
+
         if as_json:
             print_output(combos, as_json=True)
             return
@@ -46,12 +94,18 @@ def list_combos(ctx: click.Context):
         table = Table(title="🔀 Model Combos")
         table.add_column("ID", style="dim")
         table.add_column("Name", style="cyan bold")
+        table.add_column("Strategy", style="magenta")
         table.add_column("Models Chain", style="green")
 
         for c in combos:
             models = c.get("models", [])
-            chain = " → ".join(models) if isinstance(models, list) else str(models)
-            table.add_row(c.get("id", ""), c.get("name", ""), chain)
+            strat = c.get("strategy", "fallback")
+            judge = c.get("judgeModel")
+            strat_label = f"{strat} (judge: {judge})" if judge else strat
+
+            sep = " ‖ " if strat == "fusion" else " → "
+            chain = sep.join(models) if isinstance(models, list) else str(models)
+            table.add_row(c.get("id", ""), c.get("name", ""), strat_label, chain)
 
         console.print(table)
     except Exception as exc:
@@ -73,6 +127,12 @@ def get_combo(ctx: click.Context, name_or_id: str):
             console.print(f"[red]Combo '{name_or_id}' not found.[/red]")
             sys.exit(1)
 
+        strategies = _get_combo_strategies(client)
+        s_info = strategies.get(combo.get("name", ""), {})
+        combo["strategy"] = s_info.get("fallbackStrategy", "fallback")
+        if judge := s_info.get("judgeModel"):
+            combo["judgeModel"] = judge
+
         if as_json:
             print_output(combo, as_json=True)
             return
@@ -83,7 +143,11 @@ def get_combo(ctx: click.Context, name_or_id: str):
 
         table.add_row("ID", combo.get("id", ""))
         table.add_row("Name", combo.get("name", ""))
-        table.add_row("Kind", combo.get("kind", "llm"))
+        table.add_row("Kind", combo.get("kind") or "llm")
+        table.add_row("Strategy", combo.get("strategy", "fallback"))
+        if combo.get("judgeModel"):
+            table.add_row("Judge Model", combo.get("judgeModel"))
+
         models = combo.get("models", [])
         for i, m in enumerate(models, 1):
             table.add_row(f"Model #{i}", str(m))
@@ -97,9 +161,25 @@ def get_combo(ctx: click.Context, name_or_id: str):
 @combos_group.command(name="create")
 @click.argument("name")
 @click.option("-m", "--model", "models", multiple=True, required=True, help="Model ID (e.g. ag/gemini-3.8-flash)")
+@click.option(
+    "-s",
+    "--strategy",
+    type=click.Choice(["fallback", "round-robin", "fusion"], case_sensitive=False),
+    default="fallback",
+    show_default=True,
+    help="Routing strategy: fallback (sequential), round-robin (rotate), fusion (parallel ensemble + judge).",
+)
+@click.option(
+    "-j",
+    "--judge",
+    "--judge-model",
+    "judge_model",
+    default=None,
+    help="Judge model for fusion strategy (e.g. ag/claude-opus-4-6-thinking).",
+)
 @click.pass_context
-def create_combo(ctx: click.Context, name: str, models: List[str]):
-    """Create a new model combo (validates string IDs)."""
+def create_combo(ctx: click.Context, name: str, models: List[str], strategy: str, judge_model: Optional[str]):
+    """Create a new model combo (validates string IDs and strategy)."""
     client: RouterClient = ctx.obj["client"]
     as_json: bool = ctx.obj.get("as_json", False)
 
@@ -115,6 +195,10 @@ def create_combo(ctx: click.Context, name: str, models: List[str]):
             sys.exit(1)
         clean_models.append(m.strip())
 
+    strategy = strategy.lower()
+    if judge_model and strategy != "fusion":
+        strategy = "fusion"
+
     payload = {
         "name": name.strip(),
         "models": clean_models
@@ -122,10 +206,22 @@ def create_combo(ctx: click.Context, name: str, models: List[str]):
 
     try:
         res = client.post("/api/combos", json=payload)
+        _set_combo_strategy(client, name.strip(), strategy, judge_model)
+
         if as_json:
+            if isinstance(res, dict):
+                res["strategy"] = strategy
+                if judge_model:
+                    res["judgeModel"] = judge_model.strip()
             print_output(res, as_json=True)
         else:
-            console.print(f"[green]✔ Combo '{name}' created successfully with {len(clean_models)} models.[/green]")
+            strat_desc = strategy
+            if strategy == "fusion" and judge_model:
+                strat_desc += f", judge: {judge_model.strip()}"
+            console.print(
+                f"[green]✔ Combo '{name}' created successfully with {len(clean_models)} models "
+                f"(strategy: {strat_desc}).[/green]"
+            )
     except Exception as exc:
         console.print(f"[red]Failed to create combo: {exc}[/red]")
         sys.exit(1)
@@ -153,6 +249,7 @@ def delete_combo(ctx: click.Context, name_or_id: str, yes: bool):
                 return
 
         client.delete(f"/api/combos/{combo_id}")
+        _remove_combo_strategy(client, combo.get("name", ""))
         if as_json:
             print_output({"status": "deleted", "id": combo_id, "name": combo.get("name")}, as_json=True)
         else:

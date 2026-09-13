@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-09-13
+### Added
+- Provider catalog browsing (`9r providers catalog`) with `--free` and `--search` filters.
+- Direct provider connection management: `9r providers add`, `9r providers delete`, and `9r providers enable-free`.
+- Model combo routing strategies: `fallback`, `round-robin`, and `fusion` (with optional `--judge` model).
+- Global model catalog exploration and free model filtering (`9r models list --catalog`, `--free`).
+- Comprehensive provider metadata definitions covering 70+ AI providers and services.
+
 ## [0.1.1] - 2026-09-11
 ### Added
 - `9r skill show`: Print agent skill definition directly.
